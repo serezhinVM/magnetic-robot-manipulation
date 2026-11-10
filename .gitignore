@@ -1,0 +1,26 @@
+# colcon workspace artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# editor
+.vscode/
+
+# external dependencies and non-project packages kept in src/
+src/aubo_description/
+src/action_tutorials_interfaces/
+src/cpp_parameters/
+src/cpp_pubsub/
+src/cpp_srvcli/
+src/my_py_pubsub/
+src/polygon_base/
+src/polygon_plugins/
+src/py_srvcli/
+src/python_parameters/
+src/ros_tutorials/
+src/tutorial_interfaces/

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>magnetic_robots_sim</name>
+  <version>0.1.0</version>
+  <description>
+    Closed-loop simulation node for magnetic robot manipulation:
+    reads the flange magnet pose from TF, computes the magnetic field
+    (magnetic_field_model), solves the quasi-static Cosserat rod
+    (continuum_rod_model), integrates the point-robot dynamics and
+    publishes everything as RViz MarkerArray.
+  </description>
+  <maintainer email="user@example.com">vladimir</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>magnetic_field_model</exec_depend>
+  <exec_depend>continuum_rod_model</exec_depend>
+  <exec_depend>magnetic_robots_description</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

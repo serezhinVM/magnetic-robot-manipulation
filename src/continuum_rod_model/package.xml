@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>continuum_rod_model</name>
+  <version>0.1.0</version>
+  <description>
+    Quasi-static Cosserat rod model for magnetic soft continuum robots.
+    Solves the two-point boundary value problem of an inextensible
+    unshearable rod under distributed magnetic torque (m x B) and force
+    (grad(m.B)) using a shooting method with continuation. Depends on
+    magnetic_field_model for the field interface.
+  </description>
+  <maintainer email="user@example.com">vladimir</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>magnetic_field_model</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

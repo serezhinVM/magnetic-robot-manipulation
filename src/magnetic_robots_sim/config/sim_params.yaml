@@ -1,0 +1,31 @@
+continuum_sim_node:
+  ros__parameters:
+    rate: 5.0                  # Hz, physics update rate
+    world_frame: world
+    magnet_frame: magnet_link
+    rod_base_frame: rod_link
+
+    # flange magnet: N52 cylinder D50x25 (matches the URDF)
+    magnet.radius: 0.025
+    magnet.length: 0.025
+    magnet.remanence: 1.45
+
+    # magnetic soft continuum rod (medical scale)
+    rod.length: 0.08           # m
+    rod.diameter: 0.002        # m
+    rod.young_modulus: 5.0e6   # Pa (silicone composite)
+    rod.moment: 1.5e-3         # A m^2 total magnetic moment
+
+    # point magnetic robots (overdamped in viscous fluid)
+    points.count: 3
+    points.radius: 0.0015      # m
+    points.moment: 1.0e-6      # A m^2
+    points.viscosity: 0.004    # Pa s (glycerol-water ~ blood)
+    points.initial_positions: [0.55, -0.02, 0.16,
+                               0.555, 0.02, 0.14,
+                               0.545, 0.0, 0.17]
+
+    # vessel confinement (horizontal tube along y)
+    vessel.center: [0.55, 0.0, 0.15]
+    vessel.radius: 0.015
+    vessel.half_length: 0.15

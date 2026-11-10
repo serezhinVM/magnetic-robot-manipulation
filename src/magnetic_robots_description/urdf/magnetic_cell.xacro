@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!--
+  Magnetic manipulation cell:
+    - AUBO i5 arm (from aubo_description)
+    - permanent magnet on the flange (wrist3_Link)
+    - static scene: magnetic soft rod placeholder, point magnetic robots,
+      vessel-like phantom (visual placeholders; dynamic simulation nodes
+      will publish MarkerArray in later steps)
+
+  Usage:
+    xacro magnetic_cell.xacro | check_urdf /dev/stdin
+    ros2 launch magnetic_robots_description display.launch.py
+-->
+<robot name="aubo_i5_magnetic_cell" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== parameters ==================== -->
+  <!-- magnet dimensions (N52 cylinder, e.g. D50x25 class) -->
+  <xacro:property name="magnet_radius" value="0.025"/>
+  <xacro:property name="magnet_length" value="0.025"/>
+  <!-- standoff from the wrist3 flange along the flange z-axis,
+       keeps the steel of the wrist away from the magnet working volume -->
+  <xacro:property name="magnet_standoff" value="0.060"/>
+
+  <!-- ==================== arm ==================== -->
+  <xacro:include filename="$(find aubo_description)/urdf/aubo_i5.urdf"/>
+
+  <!-- ==================== magnet on flange ==================== -->
+  <link name="magnet_link">
+    <visual>
+      <origin xyz="0 0 ${magnet_length/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${magnet_radius}" length="${magnet_length}"/>
+      </geometry>
+      <material name="magnet_red">
+        <color rgba="0.85 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 ${magnet_length + 0.004}" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.012 0.012 0.008"/>
+      </geometry>
+      <material name="magnet_cap">
+        <color rgba="0.7 0.7 0.75 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${magnet_length/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${magnet_radius}" length="${magnet_length}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="magnet_joint" type="fixed">
+    <parent link="wrist3_Link"/>
+    <child link="magnet_link"/>
+    <origin xyz="0 0 ${magnet_standoff}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ==================== scene ==================== -->
+
+  <!-- vessel-like phantom: transparent tube -->
+  <link name="vessel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.015" length="0.30"/>
+      </geometry>
+      <material name="vessel_blue">
+        <color rgba="0.55 0.75 1.0 0.30"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="vessel_joint" type="fixed">
+    <parent link="world"/>
+    <child link="vessel_link"/>
+    <!-- horizontal tube in front of the robot, axis along y -->
+    <origin xyz="0.55 0.0 0.15" rpy="1.5708 0 0"/>
+  </joint>
+
+  <!-- rod base frame: the continuum rod is clamped here and grows along
+       the local +z axis (world +y, into the vessel). The rod itself and
+       the point robots are published as MarkerArray by continuum_sim_node
+       (magnetic_robots_sim), not as static URDF geometry. -->
+  <link name="rod_link"/>
+  <joint name="rod_joint" type="fixed">
+    <parent link="world"/>
+    <child link="rod_link"/>
+    <!-- base near the left end of the vessel, rod extends along +y -->
+    <origin xyz="0.55 -0.10 0.15" rpy="-1.5708 0 0"/>
+  </joint>
+
+</robot>
