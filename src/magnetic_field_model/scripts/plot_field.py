@@ -112,8 +112,9 @@ def plot_on_axis(magnet, outdir):
     z = np.linspace(-0.12, 0.12, 241)
     pts = np.column_stack([np.zeros_like(z), np.zeros_like(z), z])
     B_cyl = magnet.field(pts)[:, 2]
-    # point dipole is singular at z = 0 -> show it only outside |z| > 5 mm
-    z_dip = np.where(np.abs(z) < 5e-3, np.nan, z)
+    # point dipole is singular at z = 0 and has no physical meaning inside
+    # the magnet body -> show it only outside |z| > L/2
+    z_dip = np.where(np.abs(z) < LENGTH / 2, np.nan, z)
     pts_dip = np.column_stack([np.zeros_like(z), np.zeros_like(z),
                                np.nan_to_num(z_dip, nan=1.0)])
     with np.errstate(invalid='ignore'):
@@ -127,6 +128,11 @@ def plot_on_axis(magnet, outdir):
     ax.plot(z * 1e3, B_dip * 1e3, 'g:', lw=1.5, label='point dipole (far field)')
     ax.axvspan(-LENGTH / 2 * 1e3, LENGTH / 2 * 1e3, color='r', alpha=0.15,
                label='magnet body')
+    # explain the diverging green branches (B ~ 1/|z|^3 -> inf at z = 0)
+    ax.annotate('point dipole diverges at z → 0\n(not valid near the magnet)',
+                xy=(20.0, 1450.0), xytext=(-115.0, 1150.0),
+                arrowprops=dict(arrowstyle='->', color='g', lw=1.2),
+                fontsize=10, color='g')
     ax.set_xlabel('z along magnet axis [mm]')
     ax.set_ylabel('B_z [mT]')
     ax.set_title('On-axis field: cylinder vs dipole approximation')
