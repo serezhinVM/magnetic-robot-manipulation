@@ -31,27 +31,71 @@ REMANENCE = 1.45  # T, N52
 
 
 def plot_field_map(magnet, outdir):
-    """|B| heatmap + field arrows in the xz-plane through the magnet axis."""
-    xs = np.linspace(-0.15, 0.15, 121)
-    zs = np.linspace(-0.15, 0.15, 121)
-    X, Z = np.meshgrid(xs, zs)
+    """|B| heatmap + field lines + direction arrows in the xz-plane.
+
+    The sampling grid is cell-centered so that NO point lands exactly on the
+    magnet surfaces (x = +-R, z = +-L/2) or its cap edge, where the field is
+    discontinuous / singular and the surface-charge quadrature is invalid.
+    """
+    n = 120
+    half = 0.15
+    cell = 2 * half / n
+    xs = -half + (np.arange(n) + 0.5) * cell       # 2.5 mm cells, offset
+    X, Z = np.meshgrid(xs, xs)
     pts = np.column_stack([X.ravel(), np.zeros(X.size), Z.ravel()])
     B = magnet.field(pts)
     mag = np.linalg.norm(B, axis=1).reshape(X.shape) * 1e3  # mT
 
+    # physics sanity: the magnitude map must be symmetric in x and z.
+    # Points within 5 mm of the magnet boundary are excluded: the field is
+    # physically singular at the cap edge and the quadrature noise there is
+    # not a symmetry violation of the model.
+    dx = np.maximum(np.abs(X) - RADIUS, 0.0)
+    dz = np.maximum(np.abs(Z) - LENGTH / 2, 0.0)
+    far = np.hypot(dx, dz) > 5e-3
+    if (np.abs(mag - mag[:, ::-1])[far].max() > 1e-6 * mag.max() or
+            np.abs(mag - mag[::-1, :])[far].max() > 1e-6 * mag.max()):
+        print('WARNING: |B| grid is not symmetric -- check the field model')
+
     fig, ax = plt.subplots(figsize=(7, 6))
-    im = ax.pcolormesh(X * 1e3, Z * 1e3, mag, shading='auto', cmap='viridis')
+    # vmax = 700 mT: the physical maximum (|B| ~ 650-725 mT inside/at the
+    # pole faces); values near the cap-edge singularity would otherwise
+    # stretch the scale and flatten the contrast.
+    im = ax.pcolormesh(X * 1e3, Z * 1e3, mag, shading='auto', cmap='viridis',
+                       vmin=0.0, vmax=700.0)
     fig.colorbar(im, ax=ax, label='|B| [mT]')
     # magnet cross-section outline
     ax.add_patch(plt.Rectangle((-RADIUS * 1e3, -LENGTH / 2 * 1e3),
                                2 * RADIUS * 1e3, LENGTH * 1e3,
                                fill=False, edgecolor='r', linewidth=2))
-    # field arrows
-    step = 10
-    Bx = B[:, 0].reshape(X.shape)[::step, ::step] * 1e3
-    Bz = B[:, 2].reshape(X.shape)[::step, ::step] * 1e3
-    ax.quiver(X[::step, ::step] * 1e3, Z[::step, ::step] * 1e3, Bx, Bz,
-              color='w', scale=3000, width=0.002)
+
+    # field lines: every loop crosses the equator z = 0, so symmetric seeds
+    # there produce continuous, closed, strictly symmetric field lines.
+    # NOTE: start_points are in data coordinates (mm here, like the grid).
+    seed_x = np.array([12., 22., 32., 45., 62., 85., 115.])
+    start = np.array([[sx, 0.0] for sx in seed_x] +
+                     [[-sx, 0.0] for sx in seed_x] +
+                     [[0.0, 50.0]])                # axial line
+    ax.streamplot(xs * 1e3, xs * 1e3, B[:, 0].reshape(X.shape),
+                  B[:, 2].reshape(X.shape), color='w', linewidth=0.9,
+                  density=2.0, arrowsize=0.9, start_points=start)
+
+    # direction arrows: fixed length, direction only (the magnitude is the
+    # background color), on a sparse symmetric grid
+    aq = np.array([-125., -90., -55., -20., 20., 55., 90., 125.]) / 1e3
+    XQ, ZQ = np.meshgrid(aq, aq)
+    BQ = magnet.field(np.column_stack([XQ.ravel(), np.zeros(XQ.size),
+                                       ZQ.ravel()]))
+    U = BQ[:, 0].reshape(XQ.shape)
+    V = BQ[:, 2].reshape(XQ.shape)
+    nrm = np.hypot(U, V)
+    nrm[nrm < 1e-12] = 1.0
+    ax.quiver(XQ * 1e3, ZQ * 1e3, U / nrm, V / nrm, color='w',
+              pivot='middle', angles='xy', scale_units='xy', scale=0.2,
+              width=0.0025, alpha=0.85)
+
+    ax.set_xlim(-half * 1e3, half * 1e3)
+    ax.set_ylim(-half * 1e3, half * 1e3)
     ax.set_xlabel('x [mm]')
     ax.set_ylabel('z [mm]')
     ax.set_title('|B| and field lines in the xz-plane (red = magnet)')
@@ -97,16 +141,31 @@ def plot_on_axis(magnet, outdir):
 
 
 def plot_gradient_map(magnet, outdir):
-    """|grad B| (Frobenius norm of the Jacobian) in the xz-plane."""
-    xs = np.linspace(-0.12, 0.12, 121)
-    zs = np.linspace(-0.12, 0.12, 121)
-    X, Z = np.meshgrid(xs, zs)
+    """|grad B| (Frobenius norm of the Jacobian) in the xz-plane.
+
+    Same cell-centered grid as plot_field_map: no sample point lands on the
+    magnet surfaces or cap edge, where the gradient is singular.
+    """
+    n = 120
+    half = 0.12
+    cell = 2 * half / n
+    xs = -half + (np.arange(n) + 0.5) * cell       # 2 mm cells, offset
+    X, Z = np.meshgrid(xs, xs)
     pts = np.column_stack([X.ravel(), np.zeros(X.size), Z.ravel()])
     J = magnet.gradient(pts)
     gnorm = np.linalg.norm(J, axis=(1, 2)).reshape(X.shape)  # T/m
 
+    # physics sanity: the gradient map must be symmetric in x and z
+    # (excluding the 5 mm band around the singular cap edge, see above)
+    dx = np.maximum(np.abs(X) - RADIUS, 0.0)
+    dz = np.maximum(np.abs(Z) - LENGTH / 2, 0.0)
+    far = np.hypot(dx, dz) > 5e-3
+    if (np.abs(gnorm - gnorm[:, ::-1])[far].max() > 1e-6 * gnorm.max() or
+            np.abs(gnorm - gnorm[::-1, :])[far].max() > 1e-6 * gnorm.max()):
+        print('WARNING: |grad B| grid is not symmetric -- check the field model')
+
     fig, ax = plt.subplots(figsize=(7, 6))
-    gplot = np.where(gnorm > 1e-3, gnorm, 1e-3)  # floor for log scale
+    gplot = np.clip(gnorm, 1e-2, 1e3)  # log-scale range
     im = ax.pcolormesh(X * 1e3, Z * 1e3, gplot, shading='auto', cmap='magma',
                        norm=matplotlib.colors.LogNorm(vmin=1e-2, vmax=1e3))
     fig.colorbar(im, ax=ax, label='|grad B| [T/m] (log scale)')
@@ -132,7 +191,8 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
 
     magnet = CylinderMagnet(radius=RADIUS, length=LENGTH,
-                            remanence=REMANENCE)
+                            remanence=REMANENCE,
+                            n_radial=64, n_azimuth=128)
 
     print(f'magnet: D{2*RADIUS*1e3:.0f}x{LENGTH*1e3:.0f} mm, '
           f'Br = {REMANENCE} T')
